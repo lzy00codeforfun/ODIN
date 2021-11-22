@@ -1,15 +1,12 @@
 import os, shutil, glob, re, pdb, json
 import kaptan
-import click
+#import click
 import utils
 import torch, torchsummary, torchvision
-
-
 def main(config, mode, weights):
     # Generate configuration
     cfg = kaptan.Kaptan(handler='yaml')
     config = cfg.import_config(config)
-    print("config :", config)
 
     # Generate logger
     MODEL_SAVE_NAME, MODEL_SAVE_FOLDER, LOGGER_SAVE_NAME, CHECKPOINT_DIRECTORY = utils.generate_save_names(config)
@@ -50,17 +47,20 @@ def main(config, mode, weights):
     # --------------------- BUILD GENERATORS ------------------------
     # Supported integrated data sources --> MNIST, CIFAR
     # For BDD or others need a crawler and stuff...but we;ll deal with it later
-    from generators import ClassedGenerator_tinyImageNet as ClassedGenerator
+    from generators import ClassedGenerator
 
     load_dataset = config.get("EXECUTION.DATASET_PRELOAD")
-    if load_dataset in ["MNIST", "CIFAR10", "CIFAR100", "tinyImageNet"]:
+    if load_dataset in ["MNIST", "CIFAR10", "CIFAR100"]:
         crawler = load_dataset
         #dataset = torchvision.datasets.MNIST(root="./MNIST", train=True,)
         logger.info("No crawler necessary when using %s dataset"%crawler)
     else:
         raise NotImplementedError()
+        # import crawler
+        # crawler = crawler...
+        # logger.info("Crawling data folder %s"%config.get("DATASET.ROOT_DATA_FOLDER"))
+        # crawler = ReidDataCrawler(data_folder = config.get("DATASET.ROOT_DATA_FOLDER"), train_folder=config.get("DATASET.TRAIN_FOLDER"), test_folder = config.get("DATASET.TEST_FOLDER"), query_folder=config.get("DATASET.QUERY_FOLDER"), **{"logger":logger})
 
-    
     train_generator = ClassedGenerator( gpus=NUM_GPUS, i_shape=config.get("DATASET.SHAPE"), \
                                         normalization_mean=NORMALIZATION_MEAN, normalization_std=NORMALIZATION_STD, normalization_scale=1./config.get("TRANSFORMATION.NORMALIZATION_SCALE"), \
                                         h_flip = config.get("TRANSFORMATION.H_FLIP"), t_crop=config.get("TRANSFORMATION.T_CROP"), rea=config.get("TRANSFORMATION.RANDOM_ERASE"), 
@@ -75,7 +75,7 @@ def main(config, mode, weights):
                                         h_flip = config.get("TRANSFORMATION.H_FLIP"), t_crop=config.get("TRANSFORMATION.T_CROP"), rea=config.get("TRANSFORMATION.RANDOM_ERASE"), 
                                         **TRAINDATA_KWARGS)    
     test_generator.setup(  crawler, preload_classes = config.get("EXECUTION.DATASET_TEST_PRELOAD_CLASS"), \
-                            mode='val',batch_size=config.get("TRANSFORMATION.BATCH_SIZE"), \
+                            mode='test',batch_size=config.get("TRANSFORMATION.BATCH_SIZE"), \
                             workers = config.get("TRANSFORMATION.WORKERS"))
     logger.info("Generated testing data generator")
 
@@ -156,11 +156,4 @@ def main(config, mode, weights):
     else:
       raise NotImplementedError()
 
-
-
-
-
-
-if __name__ == "__main__":
-    main("config/vaegan_tinyImageNet.yml", "train", "")
-    # main()
+main("config/vaegan_tinyImageNet.yml", "train","")
